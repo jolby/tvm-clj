@@ -384,26 +384,22 @@ apply it to the graph atom and return the new node id."
       (add-edge! *graph :transpose [item reorder-vec] [retval] {})
       retval))
 
-  (static-cast [stream item dtype dest-shape]
+  (static-cast [stream item dtype dest-opts]
     (let [graph @*graph
           old-buffer (get-buffer graph (:bufname item))
-          new-shape (if dest-shape
-                      dest-shape
-                      ;;Get-shape performs a simplifying reduction
-                      (mp/get-shape item))
+          new-shape (or (:shape dest-opts) (mp/get-shape item))
           retval (generate-op-result! *graph :cast item dtype new-shape)]
-      (add-edge! *graph :static-cast [item dtype dest-shape] [retval] {:dtype dtype})
+      (add-edge! *graph :static-cast [item dtype dest-opts] [retval] {:dtype dtype})
       retval))
 
-  (binary-op [stream lhs rhs op dest-shape]
+  (binary-op [stream lhs rhs op dest-opts]
     (let [graph @*graph
           arg-tensors (filter is-tensor? [lhs rhs])
           primary-tensor (first arg-tensors)
-          result-shape (or dest-shape (mp/get-shape primary-tensor))
-          result-dtype (or (when primary-tensor (ct/get-datatype primary-tensor))
-                           ct/*datatype*)
+          result-shape (or (:shape dest-opts) (mp/get-shape primary-tensor))
+          result-dtype (ct/get-datatype primary-tensor)
           retval (generate-op-result! *graph :binary-op primary-tensor result-dtype result-shape)]
-      (add-edge! *graph :binary-op [lhs rhs op dest-shape] [retval] {:op op})
+      (add-edge! *graph :binary-op [lhs rhs op dest-opts] [retval] {:op op})
       retval)))
 
 

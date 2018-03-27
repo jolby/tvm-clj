@@ -31,27 +31,27 @@
 
 
 (defn static-cast
-  [item new-dt & {:keys [dest-shape]}]
-  (fnp/static-cast ct/*stream* item new-dt (or dest-shape (mp/get-shape item))))
+  [item new-dt & {:as dest-opts}]
+  (fnp/static-cast ct/*stream* item new-dt dest-opts))
 
 
 (defn binary-op
-  [lhs rhs op dest-shape]
-  (fnp/binary-op ct/*stream* lhs rhs op (or dest-shape (mp/get-shape lhs))))
+  [lhs rhs op dest-opts]
+  (fnp/binary-op ct/*stream* lhs rhs op dest-opts))
 
 (defmacro define-binary-op
   [fn-name op]
   (let [fn-name-r (symbol (str (name fn-name) "-r"))
-        dest-shape (symbol "dest-shape")
+        dest-opts (symbol "dest-opts")
         lhs (symbol "lhs")
         rhs (symbol "rhs")]
     `(do
        (defn ~fn-name
-         [~lhs ~rhs & {:keys [~dest-shape]}]
-         (binary-op ~lhs ~rhs ~op ~dest-shape))
+         [~lhs ~rhs & {:as ~dest-opts}]
+         (binary-op ~lhs ~rhs ~op ~dest-opts))
        (defn ~fn-name-r
-         [~rhs ~lhs & {:keys [~dest-shape]}]
-         (binary-op ~lhs ~rhs ~op ~dest-shape)))))
+         [~rhs ~lhs & {:as ~dest-opts}]
+         (binary-op ~lhs ~rhs ~op ~dest-opts)))))
 
 
 (define-binary-op add :+)

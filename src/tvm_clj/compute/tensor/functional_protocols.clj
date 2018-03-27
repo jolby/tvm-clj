@@ -4,5 +4,5 @@
 (defprotocol PFunctionalBackend
   (select [stream item args])
   (transpose [stream item reorder-vec])
-  (static-cast [stream item dtype dest-shape])
-  (binary-op [stream lhs rhs op dest-shape]))
+  (static-cast [stream item dtype dest-opts])
+  (binary-op [stream lhs rhs op dest-opts]))

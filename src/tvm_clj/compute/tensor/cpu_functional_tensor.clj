@@ -31,17 +31,17 @@
   (transpose [stream item reorder-vec]
     (ct/transpose item reorder-vec))
 
-  (static-cast [stream item dtype dest-shape]
-    (let [retval (ct/new-tensor (or dest-shape (ct/shape item))
+  (static-cast [stream item dtype dest-opts]
+    (let [retval (ct/new-tensor (or (get dest-opts :shape) (ct/shape item))
                                 :datatype dtype :init-value nil)]
       (ct/assign! retval item)
       retval))
 
-  (binary-op [stream lhs rhs op dest-shape]
+  (binary-op [stream lhs rhs op dest-opts]
     (let [primary-tensor (->> (filter #(instance? Tensor %) [lhs rhs])
                               first)
-          res-shape (or dest-shape (ct/shape primary-tensor))
-          retval (ct/new-tensor dest-shape
+          res-shape (or (get dest-opts :shape) (ct/shape primary-tensor))
+          retval (ct/new-tensor res-shape
                                 :datatype (ct/get-datatype primary-tensor)
                                 :init-value nil)]
       (ct/binary-op! retval 1.0 lhs 1.0 rhs op)

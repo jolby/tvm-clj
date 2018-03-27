@@ -14,7 +14,10 @@
             [tvm-clj.compute.compile-fn :as compiler]
             [tvm-clj.compute.registry :as tvm-reg]
             [tech.compute.driver :as drv]
-            [think.parallel.core :as parallel])
+            [think.parallel.core :as parallel]
+            [clojure.core.matrix :as m]
+            ;;Include the cpu driver
+            [tvm-clj.compute.cpu])
   (:import [org.bytedeco.javacpp opencv_core
             opencv_imgcodecs opencv_core$Mat]
            [tech.datatype ByteArrayView FloatArrayView]))
@@ -32,7 +35,7 @@ Output: {:datatype :float32 :shape [3 height width]}, values from -0.5->0.5"
       ;;Image is now planar; so a plane of b, a plane of g, and a plane of r.
       (ct/transpose [2 0 1])
       ;;First actual operation that is compiled.
-      (ct/static-cast :float32)
+      (ct/static-cast :float32 :sparse? true)
       ;;Rest of the work.  These should all get rolled into assignment step above.
       (ct/div 255.0)
       (ct/sub 0.5)))
@@ -181,6 +184,11 @@ Output: {:datatype :float32 :shape [3 height width]}, values from -0.5->0.5"
                        (map last)
                        (map #(/ (double %) 255.0))
                        (map #(- (double %) 0.5)))}))))
+
+
+(deftest cpu-image-test
+  (let [{:keys [result correct]} (tvm-image-test)]
+    (is (m/equals result correct 1e-5))))
 
 
 (defn time-tests
