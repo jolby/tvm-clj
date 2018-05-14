@@ -32,12 +32,12 @@
 
 (defn static-cast
   [item new-dt & {:as dest-opts}]
-  (fnp/static-cast ct/*stream* item new-dt dest-opts))
+  (fnp/static-cast ct/*stream* item new-dt (or dest-opts {})))
 
 
 (defn binary-op
   [lhs rhs op dest-opts]
-  (fnp/binary-op ct/*stream* lhs rhs op dest-opts))
+  (fnp/binary-op ct/*stream* lhs rhs op (or dest-opts {})))
 
 (defmacro define-binary-op
   [fn-name op]

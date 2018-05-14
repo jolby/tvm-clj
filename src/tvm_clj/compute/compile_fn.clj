@@ -92,12 +92,14 @@
                           (.substring node-id 0 num-idx)
                           node-id)
         graph-nodes (:nodes graph)]
-    (loop [idx 1]
-      (let [new-id (-> (format "%s-%s" id-stem idx)
-                       keyword)]
-        (if (contains? graph-nodes new-id)
-          (recur (inc idx))
-          new-id)))))
+    (if (contains? graph-nodes node-id)
+      (loop [idx 1]
+        (let [new-id (-> (format "%s-%s" id-stem idx)
+                         keyword)]
+          (if (contains? graph-nodes new-id)
+            (recur (inc idx))
+            new-id)))
+      node-id)))
 
 
 (defn- get-or-create-node-id
@@ -323,13 +325,14 @@ apply it to the graph atom and return the new node id."
 
 
 (defn generate-op-result!
-  [*graph op-name src-tensor res-dtype res-shape]
+  [*graph op-name src-tensor res-dtype res-shape dest-opts]
   (let [new-buffer (generate-derived-node! *graph {:type :buffer
                                                    :dtype res-dtype
                                                    :initial-shape res-shape
                                                    :id op-name
                                                    :byte-offset? false})]
-    (generate-derived-node! *graph (->CompileTensor :tensor op-name {:shape res-shape} (:id new-buffer) res-dtype false))))
+    (generate-derived-node! *graph (->CompileTensor :tensor (or (:id dest-opts) op-name)
+                                                    {:shape res-shape} (:id new-buffer) res-dtype false))))
 
 
 (defrecord CompileStream [*graph]
@@ -388,7 +391,7 @@ apply it to the graph atom and return the new node id."
     (let [graph @*graph
           old-buffer (get-buffer graph (:bufname item))
           new-shape (or (:shape dest-opts) (mp/get-shape item))
-          retval (generate-op-result! *graph :cast item dtype new-shape)]
+          retval (generate-op-result! *graph :cast item dtype new-shape dest-opts)]
       (add-edge! *graph :static-cast [item dtype dest-opts] [retval] {:dtype dtype})
       retval))
 
@@ -398,7 +401,8 @@ apply it to the graph atom and return the new node id."
           primary-tensor (first arg-tensors)
           result-shape (or (:shape dest-opts) (mp/get-shape primary-tensor))
           result-dtype (ct/get-datatype primary-tensor)
-          retval (generate-op-result! *graph :binary-op primary-tensor result-dtype result-shape)]
+          retval (generate-op-result! *graph :binary-op primary-tensor result-dtype
+                                      result-shape dest-opts)]
       (add-edge! *graph :binary-op [lhs rhs op dest-opts] [retval] {:op op})
       retval)))
 
@@ -770,7 +774,7 @@ Dispatch on edge type."
 (defn compile-fn
   "Produce a compiled function that has the actual function to be called
 and a description of the arguments to the function."
-  [driver initial-graph input-fn & args]
+  [driver initial-graph bind-map input-fn & args]
   (let [fn-graph (apply input-fn->graph input-fn initial-graph args)
         {:keys [host-graph device-graph]} (graph->host-device-graphs fn-graph)
         device-op-graphs (->> (partition-device-graph-into-operations device-graph)

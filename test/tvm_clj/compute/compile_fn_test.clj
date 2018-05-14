@@ -35,10 +35,10 @@ Output: {:datatype :float32 :shape [3 height width]}, values from -0.5->0.5"
       ;;Image is now planar; so a plane of b, a plane of g, and a plane of r.
       (ct/transpose [2 0 1])
       ;;First actual operation that is compiled.
-      (ct/static-cast :float32 :sparse? true)
+      (ct/static-cast :float32)
       ;;Rest of the work.  These should all get rolled into assignment step above.
       (ct/div 255.0)
-      (ct/sub 0.5)))
+      (ct/sub 0.5 :id :output)))
 
 
 (defn compile-bgr-bytes
@@ -50,7 +50,8 @@ Output: {:datatype :float32 :shape [3 height width]}, values from -0.5->0.5"
                   (compiler/make-variable :image-channels)
                   (compiler/make-tensor-and-buffer :input [:image-height :image-width :image-channels] :dtype :uint8))
         input-tensor (compiler/get-tensor graph :input)]
-    (assoc (compiler/compile-fn (tvm-reg/get-driver driver-name) graph convert-bgr-bytes-to-floats input-tensor)
+    (assoc (compiler/compile-fn (tvm-reg/get-driver driver-name) graph {:output {:sparse? false}}
+                                convert-bgr-bytes-to-floats input-tensor)
            :driver driver-name)))
 
 
@@ -177,6 +178,7 @@ Output: {:datatype :float32 :shape [3 height width]}, values from -0.5->0.5"
             ;;This is abit careless but I know the results of the compilation process
             arg-map {(get-in inputs [0 :id]) img-tensor
                      (get-in outputs [0 :id]) result-tensor}]
+        (println outputs)
         (time (fn! arg-map))
         {:result (tensor-take 10 result-tensor)
          :correct (->> (tensor-take 30 img-tensor)
